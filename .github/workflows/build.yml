@@ -1,0 +1,57 @@
+name: Master Branch Build
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  master-build:
+    runs-on: ubuntu-latest
+    name: Build Java ${{ matrix.java }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK
+      uses: actions/setup-java@v1
+      with:
+        java-version: 8
+        java-package: jdk
+    - name: Build with Gradle
+      env:
+        GRADLE_SCAN_PUBLISH: true
+      run: sh ./gradlew build
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v1
+      with:
+        name: libs-java
+        path: build/libs
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v1
+      with:
+        name: tests-java
+        path: build/reports/tests/test
+    - name: Upload Static Analysis
+      uses: actions/upload-artifact@v1
+      with:
+        name: analysis-java
+        path: build/reports/detekt
+  artifactory-publish:
+    needs: master-build
+    runs-on: ubuntu-latest
+    name: Publish to Artifactory
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+      - name: Download Java 8 libs
+        uses: actions/download-artifact@v1
+        with:
+          name: libs-java
+          path: build/libs
+      - name: Publish to Artifactory
+        env:
+          BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
+          BINTRAY_KEY: ${{ secrets.BINTRAY_KEY }}
+        run: sh ./gradlew artifactoryPublish -PbintrayUser=$BINTRAY_USER -PbintrayKey=$BINTRAY_KEY
