@@ -35,7 +35,7 @@ jobs:
         name: analysis
         path: build/reports/detekt
   artifactory-publish:
-    needs: master-build
+    needs: build
     runs-on: ubuntu-latest
     name: Publish to Artifactory
     steps:
