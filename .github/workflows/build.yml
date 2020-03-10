@@ -6,9 +6,9 @@ on:
       - master
 
 jobs:
-  master-build:
+  build:
     runs-on: ubuntu-latest
-    name: Build Master
+    name: Build
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK

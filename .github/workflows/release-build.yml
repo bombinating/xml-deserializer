@@ -6,9 +6,9 @@ on:
       - '*'
 
 jobs:
-  tag-build:
+  release-build:
     runs-on: ubuntu-latest
-    name: Build Tag
+    name: Release Build
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK
