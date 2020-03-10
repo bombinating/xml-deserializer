@@ -1,4 +1,5 @@
 = XML Deserializer (XD)
+:libVersion: 0.0.1-SNAPSHOT
 
 == Overview
 
@@ -14,7 +15,29 @@ There are a number of different ways of processing XML documents in Java. This h
 
 While each of them has their use, none of them provides a *high-level* API for processing an XML document. Instead, the user of the library must use and navigate various XML-specific data structures and configuration.
 
-The goal of the XD library is to provide a high-level API that does not require knowledge of XML processing. The XML processing is hidden by the library and the use of the library is wholly programmatic, without any XML configuration. In addition, the processing does not require an XSD and can proceed piecemeal, only mapping the elements that are of interest, rather than all of the lements
+The goal of the XD library is to provide a high-level API that does not require knowledge of XML processing. The XML processing is hidden by the library and the use of the library is wholly programmatic, without any XML configuration. In addition, the processing does not require an XSD and can proceed piecemeal, only mapping the elements that are of interest, rather than mapping all of the elements.
+
+== Usage
+
+The Maven coordinates for XD are:
+
+[source,maven,subs="normal"]
+------
+<dependency>
+    <groupId>dev.bombinating</groupId>
+    <artifactId>xml-deserializer</artifactId>
+    <version>{libVersion}</version>
+</dependency>
+------
+
+The Gradle coordinates are:
+
+[source,gradle, subs="attributes"]
+------
+dependencies {
+    implementation(group = "dev.bombinating", name = "xml-deserialzier", version = "{libVersion}")
+}
+------
 
 == Details
 
@@ -61,7 +84,7 @@ In this example, we want to parse an XML document of names for people.
 </People>
 ------
 
-We're going to store the data in a `Person` class. We want to populate the properties of the object as we encounter them in the XML document so it is convenient (though not required) if there is a no-arg constructor and the properties are mutable (`var`) and have default values. Note that On JVM, if all of the constructor arguments have default values, the compiler will generate a no-arg constructor.
+We're going to store the data in a `Person` class. We want to populate the properties of the object as we encounter them in the XML document so it is convenient (though not required) if there is a no-arg constructor and the properties are mutable (`var`) and have default values. Note that on the JVM, if all of the constructor arguments have default values, the compiler will generate a no-arg constructor.
 
 [source,kotlin]
 ------
@@ -71,7 +94,7 @@ data class Person(
 )
 ------
 
-Next we define how to map the XML elements to object properties using the `handlers` method. The generic type (`<Person>`) indicates that the context object (`obj`) the handlers are populating is of type `Person`. For both handlers, the property is set to the text of the element.
+Next we define how to map the XML elements to object properties using the `handlers` method. The generic type (`<Person>`) indicates that the context object (`obj`) the handlers are populating is of type `Person`. For both handlers, the property is simply set to the text of the element.
 
 [source,kotlin]
 ------
@@ -201,7 +224,7 @@ The XML looks like this:
 </People>
 ------
 
-We add a data class to store the address info. Note that because all of the constructor arguments are mutable and have default values, the compiler will generate a no-arg constructor on the JVM.
+We'll add a data class to store the address info. Note that because all of the constructor arguments are mutable and have default values, the compiler will generate a no-arg constructor for the class on the JVM.
 
 [source,kotlin]
 ------
@@ -222,11 +245,11 @@ data class Person(
 )
 ------
 
-The `Address` property handlers are easy to define.
+The `Address` property handlers are easy to define since they just populated from the element text.
 
 [source,kotlin]
 ------
-val handlers = handlers<Person> {
+val handlers = handlers<Address> {
     "Street" { obj.street = text }
     "City" { obj.city = text }
 }
@@ -241,7 +264,7 @@ data class Address(
     var city: String? = null
 ) {
     companion object {
-        val handlers = handlers<Person> {
+        val handlers = handlers<Address> {
             "Street" { obj.street = text }
             "City" { obj.city = text }
         }
@@ -312,7 +335,7 @@ data class Address(
 }
 ------
 
-We'll modify the `Person` class to accommodate multiple addresses. Note that the `addresses` property is neither mutable nor nullable but that it does have a default value so the compiler will generate a no-arg constructor. Also, while the `addresses` property cannot be set, `Address` objects can be added to the list.
+We'll modify the `Person` class to accommodate multiple addresses. Note that the `addresses` property is neither mutable nor nullable but that it does have a default value so the compiler will still generate a no-arg constructor for the class. Also, while the `addresses` property cannot be set, `Address` objects can be added to the list.
 
 [source,kotlin]
 ------
@@ -324,7 +347,7 @@ We'll modify the `Person` class to accommodate multiple addresses. Note that the
 )
 ------
 
-We also need to change what happens when an `<Address>` element is encountered.
+We also need to change what happens when an `<Address>` element is encountered. Rather than setting the `address` property, we add the `Address` object to the `addresses` (mutable) list.
 
 [source,kotlin]
 ------
@@ -371,7 +394,7 @@ As before, no changes are need to the `parse` call itself.
 
 == Non-String Properties
 
-Because all of the handling is done in code, it is straightforward to convert an XML attribute or element text to a non-String value.
+Because all of the handling is done in code, it is straightforward to convert an XML attribute or element text to a non-string value.
 
 For this example, we'll add a person's age and an address type.
 
