@@ -1,0 +1,522 @@
+= XML Deserializer (XD)
+
+== Overview
+
+XML Deserializer (XD) is a Kotlin JVM library for quickly and efficiently converting an XML document into a sequence of objects.
+
+The library uses a simple DSL to map element names to handler lambdas, using a context object that the lambdas populate.
+
+The library is fast and memory efficient because it uses the https://en.wikipedia.org/wiki/StAX[Streaming API for XML API] (StAX) for processing the XML.
+
+== Motivation
+
+There are a number of different ways of processing XML documents in Java. This https://www.baeldung.com/java-xml-libraries[article] has a good overview of the options: SAX, DOM, StAX and JAXB.
+
+While each of them has their use, none of them provides a *high-level* API for processing an XML document. Instead, the user of the library must use and navigate various XML-specific data structures and configuration.
+
+The goal of the XD library is to provide a high-level API that does not require knowledge of XML processing. The XML processing is hidden by the library and the use of the library is wholly programmatic, without any XML configuration. In addition, the processing does not require an XSD and can proceed piecemeal, only mapping the elements that are of interest, rather than all of the lements
+
+== Details
+
+The entry-point for the library is a https://docs.oracle.com/javase/8/docs/api/java/io/Reader.html[`Reader`] https://kotlinlang.org/docs/reference/extensions.html[extension method] called `parse`.
+
+The parse method has one required argument, `handlers`, which is of type `HandlerRegistrations`.
+
+An object of type `HandlerRegistrations` can be created using the top-level method `handlers`.
+
+Within the lambda parameter of the method, handlers are defined using a `String` extension method that takes a https://kotlinlang.org/docs/reference/lambdas.html#function-literals-with-receiver[function literal with receiver].
+
+The receiver of the lambda is of type `HandlerContext`.
+
+The `HandlerContext` provides the following functionality:
+
+* Ability to access the current XML element (`element`) via the `XmlElement` interface.
+
+* The context object being populated (`obj`) (the generic type of the `HandlerContext`)
+
+* The ability to create a new `XmlContextParser` object with a different `HandlerContext` for handling child elements (`createParser<P>`)
+
+The `XmlElement` interface provides access to:
+
+* The text of the XML element (`text`)
+* Attribute values on the XML element (`element["attr_name"]`)
+
+The `XmlContextParser` interface specifies a `parse` method that returns a populated object, based on a `HandlerRegistrations` object.
+
+== Simple Example
+
+In this example, we want to parse an XML document of names for people.
+
+[source,xml]
+------
+<People>
+    <Person>
+        <FirstName>John</FirstName>
+        <LastName>Smith</LastName>
+    </Person>
+    <Person>
+        <FirstName>Mary</FirstName>
+        <LastName>Jane</LastName>
+    </Person>
+</People>
+------
+
+We're going to store the data in a `Person` class. We want to populate the properties of the object as we encounter them in the XML document so it is convenient (though not required) if there is a no-arg constructor and the properties are mutable (`var`) and have default values. Note that On JVM, if all of the constructor arguments have default values, the compiler will generate a no-arg constructor.
+
+[source,kotlin]
+------
+data class Person(
+    var firstName: String? = null,
+    var lastName: String? = null
+)
+------
+
+Next we define how to map the XML elements to object properties using the `handlers` method. The generic type (`<Person>`) indicates that the context object (`obj`) the handlers are populating is of type `Person`. For both handlers, the property is set to the text of the element.
+
+[source,kotlin]
+------
+val handlers = handlers<Person> {
+    "FirstName" { obj.firstName = text }
+    "LastName" { obj.lastName = text }
+}
+------
+
+Since the `handlers` are related to the `Person` class, it's convenient to move the definition to the `companion object` of the class.
+
+[source,kotlin]
+------
+data class Person(var firstName: String? = null, var lastName: Int? = null) {
+    companion object {
+        val handlers = handlers<Person> {
+            "FirstName" { obj.firstName = text }
+            "LastName" { obj.lastName = text }
+        }
+    }
+}
+------
+
+For this example, we'll create the XML as a `String` and then convert the string to a `Reader`.
+
+[source,kotlin]
+------
+val reader = """
+    |<People>
+    |    <Person>
+    |        <FirstName>John</FirstName>
+    |        <LastName>Smith</LastName>
+    |    </Person>
+    |    <Person>
+    |        <FirstName>Mary</FirstName>
+    |        <LastName>Jane</LastName>
+    |    </Person>
+    |</People>
+""".trimMargin().reader()
+------
+
+The final piece is to invoke the `parse()` method on a reader with the XML data.
+
+The `parse` method takes three parameters:
+
+* Top-level handlers
+* XML handler configuration
+* Lambda for creating objects of the type the parser emits and the handlers populate
+
+For defining the top-level handlers, we again use the `handlers` method. The parser emits `Person` objects so the generic type of the method is `Person`. The name of the XML element is `Person` and the `use` method tells the parser to use the handlers defined in `Person` `companion object`.
+
+[source,kotlin]
+------
+val topLevelHandlers = handlers<Person> {
+    "Person" { use(Person.handlers) }
+}
+------
+
+The `use` method takes an optional lambda initializer for configuring the `obj` object before it is populated.
+
+[source,kotlin]
+------
+val topLevelHandlers = handlers<Person> {
+    "Person" { use(Person.handlers) { firstName = "NFN" } }
+}
+------
+
+The second parameter to the `parse` method is an optional object of type `XmlContextParserConfig`. This controls what happens when no handler is found for an XML element and what happens when a handler throws an exception. If not specified, the default is to do nothing when an XML element does not have a handler and to throw an exception of type `ProcessingException` when a handler throws an exception.
+
+[source,kotlin]
+------
+val config = XmlContextParserConfig(
+    processingExceptionHandler = {
+        println("Error parsing element '${element.name.name}': $cause")
+    }
+)
+------
+
+The third parameter to the `parse` method is an optional lambda for creating objects of the type the `parser` emits. If omitted, the parser will attempt to create objects using the  no-arg constructor for the class.
+
+[source,kotlin]
+------
+val factory = { Person(lastName = "Not Specified") }
+------
+
+Putting all of this together, the `parser` call looks like this:
+
+[source,kotlin]
+------
+val config = XmlContextParserConfig(
+    processingExceptionHandler = {
+        logger.error { "Error parsing element '${element.name.name}': $cause" }
+    }
+)
+val factory = { Person(lastName = "Not Specified") }
+val people = reader.parse(handlers<Person> {
+    "Person" { use(Person.handlers) }
+}, config, factory)
+------
+
+Since there is a no-arg constructor for the `Person` class and we don't need any error handling, the factory lambda and configuration can be omitted and the code can be simplified.
+
+[source,kotlin]
+------
+val people = reader.parse(handlers<Person> {
+    "Person" { use(Person.handlers) }
+})
+------
+
+== Nested Example
+
+Let's extend the previous example to include an address for a person.
+
+The XML looks like this:
+
+[source,xml]
+------
+<People>
+    <Person>
+        <FirstName>John</FirstName>
+        <LastName>Smith</LastName>
+        <Address>
+            <Street>666 Park Ave</Street>
+            <City>New York</City>
+        </Address>
+    </Person>
+</People>
+------
+
+We add a data class to store the address info. Note that because all of the constructor arguments are mutable and have default values, the compiler will generate a no-arg constructor on the JVM.
+
+[source,kotlin]
+------
+data class Address(
+    var street: String? = null,
+    var city: String? = null
+)
+------
+
+Next we'll modify the `Person` class to reference the `Address` class.
+
+[source,kotlin]
+------
+data class Person(
+    var firstName: String? = null,
+    var lastName: String? = null,
+    var address: Address? = null
+)
+------
+
+The `Address` property handlers are easy to define.
+
+[source,kotlin]
+------
+val handlers = handlers<Person> {
+    "Street" { obj.street = text }
+    "City" { obj.city = text }
+}
+------
+
+As we did with the `Person` handlers, we'll define the `Address` handlers in the `companion object` for the `Address` class.
+
+[source,kotlin]
+------
+data class Address(
+    var street: String? = null,
+    var city: String? = null
+) {
+    companion object {
+        val handlers = handlers<Person> {
+            "Street" { obj.street = text }
+            "City" { obj.city = text }
+        }
+    }
+}
+------
+
+Finally, we'll define the handler for the `Address` XML element in the `Person` handlers. To do this, we use the `parse` method. The first parameter to the `parse` method is a `HandlerRegistrations` object. In this case, the one we created using the `handlers` method in the `companion object` of the Address class.
+
+[source,kotlin]
+------
+val handlers = handlers<Person> {
+    // ...
+    "Address" { obj.address = parse(Address.handlers) }
+}
+------
+
+Putting it all together, it looks like this. Note that no changes are needed to the `parse` call.
+
+[source,kotlin]
+------
+data class Person(
+    var firstName: String? = null,
+    var lastName: String? = null,
+    var address: Address? = null
+) {
+    companion object {
+        val handlers = handlers<Person> {
+            "FirstName" { obj.firstName = text }
+            "LastName" { obj.lastName = text }
+            "Address" { obj.address = parse(Address.handlers) }
+        }
+    }
+}
+------
+
+== Repeated Nested Example with Attributes
+
+Let's change the XML to allow a person to have multiple addresses. To distinguish the addresses, we'll add a `desc` XML attribute to the `Address` element that describes the address.
+
+[source,xml]
+------
+<People>
+    <Person>
+        <FirstName>John</FirstName>
+        <LastName>Smith</LastName>
+        <Address desc="summer">
+            <Street>666 Park Ave</Street>
+            <City>New York</City>
+        </Address>
+        <Address desc="winter">
+            <Street>6834 Hollywood Blvd</Street>
+            <City>Los Angeles</City>
+        </Address>
+    </Person>
+</People>
+------
+
+First, we'll add the `desc` property to the `Address` class.
+
+[source,kotlin]
+------
+data class Address(
+    var street: String? = null,
+    var city: String? = null,
+    var desc: String? = null
+    // ...
+}
+------
+
+We'll modify the `Person` class to accommodate multiple addresses. Note that the `addresses` property is neither mutable nor nullable but that it does have a default value so the compiler will generate a no-arg constructor. Also, while the `addresses` property cannot be set, `Address` objects can be added to the list.
+
+[source,kotlin]
+------
+
+ class Person(
+    var firstName: String? = null,
+    var lastName: String? = null,
+    val addresses: MutableList<Address> = mutableListOf()
+)
+------
+
+We also need to change what happens when an `<Address>` element is encountered.
+
+[source,kotlin]
+------
+val handlers = handlers<Person> {
+    // ...
+    "Address" { obj.addresses.add(parse(Address.handlers)) }
+}
+------
+
+The XML *attribute* can be dealt with using the optional second parameter to the `parse` method. The second parameter specifies a lambda for creating objects of the given type for the parser handlers to populate. The lambda has access to the XML element, which can be used to read the XML attributes.
+
+[source,kotlin]
+------
+val handlers = handlers<Person> {
+    // ...
+    "Address" { obj.addresses.add(
+        parse(Address.handlers) { Address(desc = element["desc"]) })
+    }
+}
+------
+
+The full handlers mapping for the `Person` class is as follows.
+
+[source,kotlin]
+------
+data class Person(
+    var firstName: String? = null,
+    var lastName: String? = null,
+    val addresses: MutableList<Address> = mutableListOf()
+) {
+    companion object {
+        val handlers = handlers<Person> {
+            "FirstName" { obj.firstName = text }
+            "LastName" { obj.lastName = text }
+            "Address" {
+                obj.addresses.add(parse(Address.handlers) { Address(desc = element["desc"]) })
+            }
+        }
+    }
+}
+------
+
+As before, no changes are need to the `parse` call itself.
+
+== Non-String Properties
+
+Because all of the handling is done in code, it is straightforward to convert an XML attribute or element text to a non-String value.
+
+For this example, we'll add a person's age and an address type.
+
+The XML looks like this:
+
+------
+<People>
+    <Person>
+        <FirstName>John</FirstName>
+        <LastName>Smith</LastName>
+        <Age>55</Age>
+        <Address desc="summer" type="apartment">
+            <Street>666 Park Ave</Street>
+            <City>New York</City>
+        </Address>
+        <Address desc="winter" type="house">
+            <Street>6834 Hollywood Blvd</Street>
+            <City>Los Angeles</City>
+        </Address>
+    </Person>
+</People>
+------
+
+We'll create an enum for the `<Address>` `type` attribute:
+
+[source,kotlin]
+------
+enum class AddressType {
+    Apartment,
+    House
+}
+------
+
+Let's add a `companion object` method to convert from the XML attribute value to an `AddressType` enum.
+
+[source,kotlin]
+------
+enum class AddressType(val xmlValue: String) {
+    Apartment("apartment"),
+    House("house");
+    companion object {
+        private val map: Map<String, AddressType> = values().map { it.xmlValue to it }.toMap()
+        operator fun get(xmlValue: String): AddressType? = map[xmlValue]
+    }
+}
+------
+
+And we'll add a type property to the `Address` class:
+
+[source,kotlin]
+------
+data class Address(
+    var street: String? = null,
+    var city: String? = null,
+    var desc: String? = null,
+    var type: AddressType? = null
+    // ...
+}
+------
+
+Since the `<Address>` `type` is an attribute (as opposed to an element), we'll handle it when the `Address` object is created in the `Person` mapping.
+
+[source,kotlin]
+------
+val handlers = handlers<Person> {
+    // ...
+    "Address" {
+        obj.addresses.add(parse(Address.handlers) {
+            Address(desc = element["desc"], type = AddressType[element["type"]])
+        })
+    }
+}
+------
+
+For the person's age, we'll add an `age` property to the `Person` class.
+
+[source,kotlin]
+------
+data class Person(
+    var firstName: String? = null,
+    var lastName: String? = null,
+    val addresses: MutableList<Address> = mutableListOf(),
+    var age: Int? = null
+) // ...
+------
+
+The last step is to specify how this property will be populated.
+
+[source,kotlin]
+------
+val handlers = handlers<Person> {
+    "Age" { obj.age = text.toIntOrNull() }
+    // ...
+}
+------
+
+Here's the final code. Note that the `parse` call hasn't changed since the first example.
+
+[source,kotlin]
+------
+enum class AddressType(val xmlValue: String) {
+    Apartment("apartment"),
+    House("house");
+    companion object {
+        private val map: Map<String, AddressType> = values().map { it.xmlValue to it }.toMap()
+        operator fun get(xmlValue: String): AddressType? = map[xmlValue]
+    }
+}
+
+data class Address(
+    var street: String? = null,
+    var city: String? = null,
+    var desc: String? = null,
+    var type: AddressType? = null
+) {
+    companion object {
+        val handlers = handlers<Person> {
+            "Street" { obj.street = text }
+            "City" { obj.city = text }
+        }
+    }
+}
+
+data class Person(
+    var firstName: String? = null,
+    var lastName: String? = null,
+    val addresses: MutableList<Address> = mutableListOf(),
+    var age: Int? = null
+) {
+    companion object {
+        val handlers = handlers<Person> {
+            "FirstName" { obj.firstName = text }
+            "LastName" { obj.lastName = text }
+            "Age" { obj.age = text.toIntOrNull() }
+            "Address" {
+                obj.addresses.add(parse(Address.handlers) {
+                    Address(desc = element["desc"], type = AddressType[element["type"]])
+                })
+            }
+        }
+    }
+}
+
+val people = reader.parse(handlers<Person> {
+    "Person" { use(Person.handlers) }
+})
+
+------
