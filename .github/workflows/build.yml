@@ -47,7 +47,7 @@ jobs:
       - name: Download libs
         uses: actions/download-artifact@v1
         with:
-          name: libs-java
+          name: libs
           path: build/libs
       - name: Publish to Artifactory
         env:
