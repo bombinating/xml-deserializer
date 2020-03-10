@@ -3,6 +3,9 @@
 
 == Overview
 
+image:https://github.com/bombinating/xml-deserializer/workflows/Master%20Build/badge.svg[link="https://github.com/bombinating/xml-deserializer/actions"]
+image:https://sonarcloud.io/api/project_badges/measure?project=bombinating_xml-deserializer&metric=alert_status["SonarCloud", link="https://sonarcloud.io/dashboard?id=bombinating_bombinating_xml-deserializer"]
+
 XML Deserializer (XD) is a Kotlin JVM library for quickly and efficiently converting an XML document into a sequence of objects.
 
 The library uses a simple DSL to map element names to handler lambdas, using a context object that the lambdas populate.
@@ -32,7 +35,7 @@ The Maven coordinates for XD are:
 
 The Gradle coordinates are:
 
-[source,gradle, subs="attributes"]
+[source,gradle,subs="attributes"]
 ------
 dependencies {
     implementation(group = "dev.bombinating", name = "xml-deserialzier", version = "{libVersion}")
