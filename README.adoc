@@ -1,5 +1,5 @@
 = XML Deserializer (XD)
-:libVersion: 0.0.1-SNAPSHOT
+:libVersion: 1.0.0
 
 == Overview
 
