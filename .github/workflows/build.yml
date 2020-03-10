@@ -34,23 +34,23 @@ jobs:
       with:
         name: analysis
         path: build/reports/detekt
-#  artifactory-publish:
-#    needs: master-build
-#    runs-on: ubuntu-latest
-#    name: Publish to Artifactory
-#    steps:
-#      - uses: actions/checkout@v2
-#      - name: Set up JDK
-#        uses: actions/setup-java@v1
-#        with:
-#          java-version: 8
-#      - name: Download libs
-#        uses: actions/download-artifact@v1
-#        with:
-#          name: libs-java
-#          path: build/libs
-#      - name: Publish to Artifactory
-#        env:
-#          BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
-#          BINTRAY_KEY: ${{ secrets.BINTRAY_KEY }}
-#        run: sh ./gradlew artifactoryPublish -PbintrayUser=$BINTRAY_USER -PbintrayKey=$BINTRAY_KEY
+  artifactory-publish:
+    needs: master-build
+    runs-on: ubuntu-latest
+    name: Publish to Artifactory
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      - name: Download libs
+        uses: actions/download-artifact@v1
+        with:
+          name: libs-java
+          path: build/libs
+      - name: Publish to Artifactory
+        env:
+          BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
+          BINTRAY_KEY: ${{ secrets.BINTRAY_KEY }}
+        run: sh ./gradlew artifactoryPublish -PbintrayUser=$BINTRAY_USER -PbintrayKey=$BINTRAY_KEY
