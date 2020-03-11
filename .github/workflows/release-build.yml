@@ -6,9 +6,9 @@ on:
       - '*'
 
 jobs:
-  tag-build:
+  release-build:
     runs-on: ubuntu-latest
-    name: Build Tag
+    name: Release Build
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK
@@ -53,4 +53,38 @@ jobs:
         env:
           BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
           BINTRAY_KEY: ${{ secrets.BINTRAY_KEY }}
-        run: sh ./gradlew bintrayUpload -PbintrayUser=$BINTRAY_USER -PbintrayKey=$BINTRAY_KEY
+          SIGNING_KEY_ENCODED: ${{ secrets.SIGNING_KEY_ENCODED }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: >-
+          sh ./gradlew bintrayUpload
+          -PbintrayUser=$BINTRAY_USER
+          -PbintrayKey=$BINTRAY_KEY
+          -PsigningKeyEncoded=$SIGNING_KEY_ENCODED
+          -PsigningPassword=$SIGNING_PASSWORD
+  maven-publish:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Publish to Maven Central
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      - name: Download libs
+        uses: actions/download-artifact@v1
+        with:
+          name: libs
+          path: build/libs
+      - name: Sign and publish to Maven Central
+        env:
+          SIGNING_KEY_ENCODED: ${{ secrets.SIGNING_KEY_ENCODED }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          MAVEN_CENTRAL_USER: ${{ secrets.MAVEN_CENTRAL_USER }}
+          MAVEN_CENTRAL_KEY: ${{ secrets.MAVEN_CENTRAL_KEY }}
+        run: >-
+          sh ./gradlew sign publishAllPublicationsToMavenCentralRepository
+          -PsigningKeyEncoded=$SIGNING_KEY_ENCODED
+          -PsigningPassword=$SIGNING_PASSWORD
+          -PmavenCentralUser=$MAVEN_CENTRAL_USER
+          -PmavenCentralKey=$MAVEN_CENTRAL_KEY
