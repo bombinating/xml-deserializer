@@ -53,7 +53,14 @@ jobs:
         env:
           BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
           BINTRAY_KEY: ${{ secrets.BINTRAY_KEY }}
-        run: sh ./gradlew artifactoryPublish -PbintrayUser=$BINTRAY_USER -PbintrayKey=$BINTRAY_KEY
+          SIGNING_KEY_ENCODED: ${{ secrets.SIGNING_KEY_ENCODED }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: >-
+          sh ./gradlew artifactoryPublish
+          -PbintrayUser=$BINTRAY_USER
+          -PbintrayKey=$BINTRAY_KEY
+          -PsigningKeyEncoded=$SIGNING_KEY_ENCODED
+          -PsigningPassword=$SIGNING_PASSWORD
   maven-snapshot-publish:
     needs: build
     runs-on: ubuntu-latest
