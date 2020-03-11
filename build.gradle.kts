@@ -24,14 +24,16 @@ import net.researchgate.release.ReleaseExtension
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jfrog.gradle.plugin.artifactory.dsl.PublisherConfig
+import java.util.Base64
 
+val mavenStagingUrl = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+val mavenSnapshotUrl = uri("https://oss.sonatype.org/content/repositories/snapshots")
+val vendor = "Bombinating Development"
 val libName = rootProject.name
 val pubName = "library"
 val kdocLoc = "$buildDir/kdoc"
 val gitUrl = "https://github.com/bombinating/$libName.git"
-
-val bintrayUser: String? by project
-val bintrayKey: String? by project
+val projectUrl = "https://github.com/bombinating/$libName"
 
 repositories {
     mavenCentral()
@@ -41,6 +43,7 @@ repositories {
 plugins {
     kotlin("jvm")
     `maven-publish`
+    signing
     id("com.gradle.plugin-publish")
     id("com.jfrog.artifactory")
     id("com.jfrog.bintray")
@@ -71,9 +74,35 @@ tasks.withType<Test> {
     }
 }
 
+tasks.withType<Jar> {
+    from("$projectDir/LICENSE.txt") {
+        into("META-INF")
+    }
+    into("META-INF/maven/${project.group}/${project.name}") {
+        from({ tasks.findByName("generatePomFileFor${pubName.capitalize()}Publication") })
+        rename(".*", "pom.xml")
+    }
+}
+
 val sourcesJar = tasks.create<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
     from(sourceSets["main"].allSource)
+    manifest {
+        attributes(
+            mapOf(
+                "Created-By" to "Gradle ${gradle.gradleVersion}",
+                "Build-Jdk-Spec" to JavaVersion.current().majorVersion,
+                "Specification-Title" to project.description,
+                "Specification-Version" to project.version.toString().replace("""(\d+\.\d+)(\..*)""".toRegex()) {
+                    it.groups[1]?.value ?: "Unknown"
+                },
+                "Specification-Vendor" to vendor,
+                "Implementation-Title" to project.description,
+                "Implementation-Version" to project.version,
+                "Implementation-Vendor" to vendor
+            )
+        )
+    }
 }
 
 val dokka = tasks.withType<DokkaTask> {
@@ -92,14 +121,59 @@ val dokkaJar = tasks.create<Jar>("dokkaJar") {
 publishing {
     publications {
         create<MavenPublication>(pubName) {
+            pom {
+                name.set(project.description)
+                description.set("Kotlin JVM library for quickly and efficiently converting an XML document into a sequence of objects")
+                url.set(projectUrl)
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("bombinating")
+                        name.set(vendor)
+                        email.set("bombinating.dev@gmail.com")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:$gitUrl")
+                    developerConnection.set("scm:git:$gitUrl")
+                    url.set(projectUrl)
+                }
+            }
             from(components.getByName("java"))
             artifact(sourcesJar)
             artifact(dokkaJar)
         }
     }
+    repositories {
+        val mavenCentralUser: String? by project
+        val mavenCentralKey: String? by project
+        maven {
+            name = "mavenCentral"
+            url = mavenStagingUrl
+            credentials {
+                username = mavenCentralUser
+                password = mavenCentralKey
+            }
+        }
+        maven {
+            name = "mavenCentralSnapshots"
+            url = mavenSnapshotUrl
+            credentials {
+                username = mavenCentralUser
+                password = mavenCentralKey
+            }
+        }
+    }
 }
 
 bintray {
+    val bintrayUser: String? by project
+    val bintrayKey: String? by project
     user = bintrayUser
     key = bintrayKey
     publish = true
@@ -119,6 +193,8 @@ bintray {
 }
 
 artifactory {
+    val bintrayUser: String? by project
+    val bintrayKey: String? by project
     setContextUrl("https://oss.jfrog.org/artifactory")
     publish(delegateClosureOf<PublisherConfig> {
         repository(delegateClosureOf<groovy.lang.GroovyObject> {
@@ -144,4 +220,12 @@ release {
         requireBranch = "master"
         pushReleaseVersionBranch = "release"
     }
+}
+
+signing {
+    val signingKeyEncoded: String? by project
+    val signingPassword: String? by project
+    val signingKey = signingKeyEncoded?.let { String(Base64.getDecoder().decode(it)) }
+    useInMemoryPgpKeys(signingKey, signingPassword)
+    sign(publishing.publications[pubName])
 }

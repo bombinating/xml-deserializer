@@ -54,3 +54,30 @@ jobs:
           BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
           BINTRAY_KEY: ${{ secrets.BINTRAY_KEY }}
         run: sh ./gradlew artifactoryPublish -PbintrayUser=$BINTRAY_USER -PbintrayKey=$BINTRAY_KEY
+  maven-snapshot-publish:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Publish to Maven Central Snapshot
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 8
+      - name: Download libs
+        uses: actions/download-artifact@v1
+        with:
+          name: libs
+          path: build/libs
+      - name: Sign and publish to Maven Central
+        env:
+          SIGNING_KEY_ENCODED: ${{ secrets.SIGNING_KEY_ENCODED }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          MAVEN_CENTRAL_USER: ${{ secrets.MAVEN_CENTRAL_USER }}
+          MAVEN_CENTRAL_KEY: ${{ secrets.MAVEN_CENTRAL_KEY }}
+        run: >-
+          sh ./gradlew sign publishAllPublicationsToMavenCentralSnapshotsRepository
+          -PsigningKeyEncoded=$SIGNING_KEY_ENCODED
+          -PsigningPassword=$SIGNING_PASSWORD
+          -PmavenCentralUser=$MAVEN_CENTRAL_USER
+          -PmavenCentralKey=$MAVEN_CENTRAL_KEY
