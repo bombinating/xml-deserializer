@@ -30,22 +30,18 @@ internal class ConfigurableXmlContextParser<T>(
     private val reader: DepthAwareXmIterator,
     private val config: XmlContextParserConfig
 ) : XmlContextParser<T> {
-    override fun <T> parse(
-        element: XmlElement,
-        handlers: HandlerRegistrations<T>,
-        factory: () -> T
-    ): T {
+    override fun <T> parse(element: XmlElement, handlers: HandlerRegistrations<T>, factory: () -> T): T {
         val t = factory()
         while (reader.hasNext()) {
             val e = reader.next()
             if (e.isStartElement) {
                 logger.debug { "Start element: ${e.asStartElement()}, depth: ${reader.depth}" }
                 val xmlElement = StartElementXmlElement(e.asStartElement(), reader::text)
-                handlers(HandlerContextParserConfig(reader, xmlElement, t, config))
+                handlers(HandlerContextParserConfig(WrappedDepthAwareXmIterator(reader), xmlElement, t, config))
             } else if (e.isEndElement) {
                 logger.debug { "End element: ${e.asEndElement()}, depth: ${reader.depth}" }
                 if (e.asEndElement().name.localPart == element.name.name && reader.depth == 0) {
-                    logger.debug { "The end element is the same as the start element and the depth is 0" }
+                    logger.debug { "Finished - the end element is the same as the start element and the depth is 0" }
                     break
                 }
             }

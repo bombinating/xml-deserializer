@@ -15,8 +15,6 @@
  */
 package dev.bombinating.xml.deserializer
 
-import java.lang.RuntimeException
-
 /**
  * Exception caused by processing XML.
  *
@@ -24,8 +22,4 @@ import java.lang.RuntimeException
  * @property element [XmlElement] the exception occurred on
  * @param cause the exception that occurred
  */
-class ProcessingException(
-    val type: ProcessingType,
-    val element: XmlElement,
-    cause: Throwable
-) : RuntimeException(cause)
+class ProcessingException(val type: ProcessingType, val element: XmlElement, cause: Throwable) : RuntimeException(cause)

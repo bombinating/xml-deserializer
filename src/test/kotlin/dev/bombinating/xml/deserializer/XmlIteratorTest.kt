@@ -19,86 +19,10 @@ import mu.KotlinLogging
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 private val logger = KotlinLogging.logger {}
-
-data class Phone(
-    var desc: String? = null,
-    var number: String? = null,
-    var ext: String? = null
-) {
-    companion object {
-        val handlers = handlers<Phone> {
-            "PhoneNumber" { obj.number = text }
-            "PhoneExtension" { obj.ext = text }
-        }
-    }
-}
-
-enum class AddressType(val xmlValue: String) {
-    Permanent("permanent"),
-    Vacation("vacation");
-
-    companion object {
-        private val map = values().map { it.xmlValue to it }.toMap()
-        operator fun get(xmlValue: String?) = xmlValue?.let {
-            map[it] ?: throw RuntimeException("XML value '$xmlValue' not found")
-        }
-    }
-}
-
-data class Address(
-    var type: AddressType? = null,
-    var street1: String? = null,
-    var startMonth: Int? = null,
-    var endMonth: Int? = null
-) {
-    companion object {
-        val handlers = handlers<Address> {
-            "Street1" { obj.street1 = text }
-        }
-    }
-}
-
-data class Person(
-    var firstName: String? = null,
-    var lastName: String? = null,
-    var age: Int? = null,
-    var address: Address? = null,
-    var phones: MutableList<Phone>? = null,
-    var height: Int? = null
-) {
-    companion object {
-        val handlers = handlers<Person> {
-            "FirstName" { obj.firstName = text }
-            "LastName" { obj.lastName = text }
-            "Height" { obj.height = text.toInt() }
-            "Address" {
-                obj.address = parse(Address.handlers) {
-                    Address(
-                        type = element["type"]?.let { AddressType[it] },
-                        startMonth = element["start"]?.toInt(),
-                        endMonth = element["end"]?.toInt()
-                    )
-                }
-            }
-            "Phone" {
-                obj.addPhone(parse(Phone.handlers) {
-                    Phone(desc = element["description"])
-                })
-            }
-        }
-    }
-
-    fun addPhone(phone: Phone) {
-        if (phones == null) {
-            phones = mutableListOf()
-        }
-        phones?.add(phone)
-    }
-
-}
 
 class XmlIteratorTest {
 
@@ -360,6 +284,41 @@ class XmlIteratorTest {
     }
 
     @Test
+    fun `doubly nested handlers`() {
+        val stateCode = "MN"
+        val stateDesc = "Minnesota"
+        val countryCode = "US"
+        val countryDesc = "United States"
+        val reader = """
+            |<People>
+            |   <Person>
+            |       <Address>
+            |           <State>
+            |               <Code>$stateCode</Code>
+            |               <Desc>$stateDesc</Desc>
+            |           </State>
+            |           <Country>
+            |               <Code>$countryCode</Code>
+            |               <Desc>$countryDesc</Desc>
+            |           </Country>
+            |       </Address>
+            |   </Person>
+            |</People>
+        """.trimMargin().reader()
+        val handlers = handlers<Person> {
+            "Person" {
+                use(Person.handlers)
+            }
+        }
+        val people = reader.parse(handlers).toList()
+        assertEquals(1, people.size)
+        val person = people[0]
+        assertEquals(stateCode, person.address?.state?.code)
+        assertEquals(countryCode, person.address?.country?.code)
+    }
+
+
+    @Test
     fun `multiple nested elements`() {
         val phone1 = "111-222-3333"
         val ext1 = "1234"
@@ -376,6 +335,9 @@ class XmlIteratorTest {
             |           <PhoneNumber>$phone2</PhoneNumber>
             |           <PhoneExtension>$ext2</PhoneExtension>
             |       </Phone>
+            |       <Address>
+            |           <Street1>100 Main St</Street1>
+            |       </Address>
             |   </Person>
             |</People>
         """.trimMargin().reader()
@@ -387,11 +349,14 @@ class XmlIteratorTest {
         val people = reader.parse(handlers).toList()
         assertEquals(1, people.size)
         val person = people[0]
-        assertEquals(2, person.phones?.size)
-        assertEquals(phone1, person.phones?.get(0)?.number)
-        assertEquals(ext1, person.phones?.get(0)?.ext)
-        assertEquals(phone2, person.phones?.get(1)?.number)
-        assertEquals(ext2, person.phones?.get(1)?.ext)
+        assertEquals(2, person.phones.size)
+        val phone1Info = person.phones[0]
+        val phone2Info = person.phones[1]
+        assertEquals(phone1, phone1Info.number)
+        assertEquals(ext1, phone1Info.ext)
+        assertEquals(phone2, phone2Info.number)
+        assertEquals(ext2, phone2Info.ext)
+        assertNotNull(person.address)
     }
 
     @Test
