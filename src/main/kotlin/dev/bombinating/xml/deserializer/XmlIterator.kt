@@ -94,33 +94,28 @@ internal class XmlIterator<T>(
     fun handleEvent(e: XMLEvent): Boolean =
         if (e.isStartElement && (startDepth == null || eventReader.depth == startDepth)) {
             val startElement = e.asStartElement()
-            logger.debug { "Next start element: $startElement" }
-            val element = StartElementXmlElement(startElement, eventReader::text)
+            logger.debug { "Next start element: $startElement, depth: ${eventReader.depth}" }
+            val elem = StartElementXmlElement(startElement, eventReader::text)
             val t = try {
                 factory()
             } catch (@Suppress("TooGenericExceptionCaught") e: Throwable) {
                 logger.error { "Error invoking the object factory: $e" }
-                val ex = ProcessingException(type = ProcessingType.Factory, element = element, cause = e)
+                val ex = ProcessingException(type = ProcessingType.Factory, element = elem, cause = e)
                 config.processingExceptionHandler?.invoke(ex)
-                    ?: throw ProcessingException(ProcessingType.Factory, element, e)
+                    ?: throw ProcessingException(ProcessingType.Factory, elem, e)
                 null
             }
             if (t != null) {
-                logger.debug { "Searching for handler for element name '${element.name.name}'" }
+                logger.debug { "Searching for handler for element name '${elem.name.name}'" }
                 val parentDepth = eventReader.depth
-                if (handlers.invoke(
-                        HandlerContextParserConfig(
-                            WrappedDepthAwareXmIterator(eventReader), element, t, config
-                        )
-                    )
-                ) {
+                if (handlers(HandlerContextParserConfig(WrappedDepthAwareXmIterator(eventReader), elem, t, config))) {
                     logger.debug { "Element successfully processed" }
                     startDepth = parentDepth
                     nextResult = t
                     true
                 } else {
                     logger.debug { "Element not handled" }
-                    config.missingElementHandler?.invoke(element)
+                    config.missingElementHandler?.invoke(elem)
                     false
                 }
             } else {

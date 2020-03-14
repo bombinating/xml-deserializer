@@ -22,6 +22,7 @@ pluginManagement {
     val dokkaPluginVersion: String by settings
     val enterprisePluginVersion: String by settings
     val kotlinVersion: String by settings
+    val nexusStagingPluginVersion: String by settings
     val publishPluginVersion: String by settings
     val releasePluginVersion: String by settings
     @Suppress("UnstableApiUsage")
@@ -31,6 +32,7 @@ pluginManagement {
         id("com.gradle.plugin-publish") version publishPluginVersion
         id("com.jfrog.artifactory") version artifactoryPluginVersion
         id("com.jfrog.bintray") version bintrayPluginVersion
+        id("io.codearte.nexus-staging") version nexusStagingPluginVersion
         id("io.gitlab.arturbosch.detekt") version detektPluginVersion
         id("net.researchgate.release") version releasePluginVersion
         id("org.jetbrains.dokka") version dokkaPluginVersion

@@ -35,7 +35,7 @@ jobs:
         name: analysis
         path: build/reports/detekt
   bintray-publish:
-    needs: tag-build
+    needs: release-build
     runs-on: ubuntu-latest
     name: Publish to Bintray
     steps:
@@ -62,7 +62,7 @@ jobs:
           -PsigningKeyEncoded=$SIGNING_KEY_ENCODED
           -PsigningPassword=$SIGNING_PASSWORD
   maven-publish:
-    needs: build
+    needs: release-build
     runs-on: ubuntu-latest
     name: Publish to Maven Central
     steps:
@@ -83,7 +83,7 @@ jobs:
           MAVEN_CENTRAL_USER: ${{ secrets.MAVEN_CENTRAL_USER }}
           MAVEN_CENTRAL_KEY: ${{ secrets.MAVEN_CENTRAL_KEY }}
         run: >-
-          sh ./gradlew sign publishAllPublicationsToMavenCentralRepository
+          sh ./gradlew sign publishAllPublicationsToMavenCentralRepository closeAndReleaseRepository
           -PsigningKeyEncoded=$SIGNING_KEY_ENCODED
           -PsigningPassword=$SIGNING_PASSWORD
           -PmavenCentralUser=$MAVEN_CENTRAL_USER
