@@ -47,6 +47,7 @@ plugins {
     id("com.gradle.plugin-publish")
     id("com.jfrog.artifactory")
     id("com.jfrog.bintray")
+    id("io.codearte.nexus-staging")
     id("io.gitlab.arturbosch.detekt")
     id("net.researchgate.release")
     id("org.jetbrains.dokka")
@@ -228,4 +229,11 @@ signing {
     val signingKey = signingKeyEncoded?.let { String(Base64.getDecoder().decode(it)) }
     useInMemoryPgpKeys(signingKey, signingPassword)
     sign(publishing.publications[pubName])
+}
+
+nexusStaging {
+    val mavenCentralUser: String? by project
+    val mavenCentralKey: String? by project
+    username = mavenCentralUser
+    password = mavenCentralKey
 }
