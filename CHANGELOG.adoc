@@ -1,0 +1,7 @@
+=== 1.0.2
+
+Bug fix for nested XML sub-trees.
+
+=== 1.0.1
+
+Initial release

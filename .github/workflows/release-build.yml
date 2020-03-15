@@ -88,3 +88,4 @@ jobs:
           -PsigningPassword=$SIGNING_PASSWORD
           -PmavenCentralUser=$MAVEN_CENTRAL_USER
           -PmavenCentralKey=$MAVEN_CENTRAL_KEY
+          -Dorg.gradle.internal.publish.checksums.insecure=true
