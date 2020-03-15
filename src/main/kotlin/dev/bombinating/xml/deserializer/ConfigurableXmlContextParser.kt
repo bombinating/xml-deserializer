@@ -40,7 +40,7 @@ internal class ConfigurableXmlContextParser<T>(
                 handlers(HandlerContextParserConfig(WrappedDepthAwareXmIterator(reader), xmlElement, t, config))
             } else if (e.isEndElement) {
                 logger.debug { "End element: ${e.asEndElement()}, depth: ${reader.depth}" }
-                if (e.asEndElement().name.localPart == element.name.name && reader.depth == 0) {
+                if (reader.depth == 0) {
                     logger.debug { "Finished - the end element is the same as the start element and the depth is 0" }
                     break
                 }
