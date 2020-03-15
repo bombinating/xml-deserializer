@@ -16,8 +16,8 @@
 package dev.bombinating.xml.deserializer
 
 import mu.KotlinLogging
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -187,6 +187,7 @@ class XmlIteratorTest {
         val person = people[0]
         assertEquals(firstName, person.firstName)
         assertEquals(lastName, person.lastName)
+        assertNull(person.address)
     }
 
     @Test

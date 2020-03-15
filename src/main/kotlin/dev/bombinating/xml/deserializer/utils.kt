@@ -15,20 +15,11 @@
  */
 package dev.bombinating.xml.deserializer
 
-data class Phone(
-    var desc: String? = null,
-    var number: String? = null,
-    var ext: String? = null
-) {
-    companion object {
-        val handlers =
-            handlers<Phone> {
-                "PhoneNumber" { obj.number = text }
-                "PhoneExtension" { obj.ext = text }
-            }
-    }
-
-    val empty: Boolean
-        get() = (desc == null) && (number == null) && (ext == null)
-
-}
+/**
+ * If the [nullCond] lambda returns true, returns null; otherwise, returns the object.
+ *
+ * @receiver object to invoke the [nullCond] lambda on
+ * @param nullCond lambda that takes the @receiver and returns whether to return null
+ * @return if the [nullCond] lambda returns true, null; otherwise the @receiver
+ */
+fun <T> T.nullIf(nullCond: (T) -> Boolean): T? = if (nullCond(this)) null else this

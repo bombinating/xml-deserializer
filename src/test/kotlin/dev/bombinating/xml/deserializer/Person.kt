@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 Andrew Geery
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package dev.bombinating.xml.deserializer
 
 data class Person(
@@ -15,14 +30,13 @@ data class Person(
                 "LastName" { obj.lastName = text }
                 "Height" { obj.height = text.toInt() }
                 "Address" {
-                    obj.address =
-                        parse(Address.handlers) {
-                            Address(
-                                type = element["type"]?.let { AddressType[it] },
-                                startMonth = element["start"]?.toInt(),
-                                endMonth = element["end"]?.toInt()
-                            )
-                        }
+                    obj.address = parse(Address.handlers) {
+                        Address(
+                            type = element["type"]?.let { AddressType[it] },
+                            startMonth = element["start"]?.toInt(),
+                            endMonth = element["end"]?.toInt()
+                        )
+                    }.nullIf(Address::empty)
                 }
                 "Phone" {
                     obj.phones.add(parse(Phone.handlers) {

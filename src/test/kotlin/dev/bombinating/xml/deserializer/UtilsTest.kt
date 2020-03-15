@@ -15,20 +15,22 @@
  */
 package dev.bombinating.xml.deserializer
 
-data class Phone(
-    var desc: String? = null,
-    var number: String? = null,
-    var ext: String? = null
-) {
-    companion object {
-        val handlers =
-            handlers<Phone> {
-                "PhoneNumber" { obj.number = text }
-                "PhoneExtension" { obj.ext = text }
-            }
+import kotlin.test.Test
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+
+class UtilsTest {
+
+    @Test
+    fun `nullIf false test`() {
+        val phone = Phone(number = "111-2222")
+        assertNotNull(phone.nullIf(Phone::empty))
     }
 
-    val empty: Boolean
-        get() = (desc == null) && (number == null) && (ext == null)
+    @Test
+    fun `nullIf true test`() {
+        val phone = Phone()
+        assertNull(phone.nullIf(Phone::empty))
+    }
 
 }
