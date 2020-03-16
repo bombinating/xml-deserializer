@@ -39,9 +39,10 @@ internal class ConfigurableXmlContextParser<T>(
                 val xmlElement = StartElementXmlElement(e.asStartElement(), reader::text)
                 handlers(HandlerContextParserConfig(WrappedDepthAwareXmIterator(reader), xmlElement, t, config))
             } else if (e.isEndElement) {
-                logger.debug { "End element: ${e.asEndElement()}, depth: ${reader.depth}" }
-                if (reader.depth == 0) {
-                    logger.debug { "Finished - the end element is the same as the start element and the depth is 0" }
+                val endElement = e.asEndElement()
+                logger.debug { "End element: $endElement, depth: ${reader.depth}" }
+                if (reader.depth < 0) {
+                    logger.debug { "Finished $endElement subtree - the depth is < 0>" }
                     break
                 }
             }

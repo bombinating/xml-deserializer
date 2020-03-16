@@ -318,7 +318,6 @@ class XmlIteratorTest {
         assertEquals(countryCode, person.address?.country?.code)
     }
 
-
     @Test
     fun `multiple nested elements`() {
         val phone1 = "111-222-3333"
@@ -386,6 +385,38 @@ class XmlIteratorTest {
         assertEquals(2, people.size)
         assertEquals(person1Name, people[0].firstName)
         assertEquals(person2Name, people[1].firstName)
+    }
+
+    @Test
+    fun `no handler for subtree`() {
+        val title = "Test #1"
+        val tag = "Test Tag"
+        val author = "Test Author"
+        val status = "Published"
+        val reader = """
+            |<Posts>
+            |   <Post>
+            |       <Title>$title</Title>
+            |       <Metadata>
+            |           <Status>$status</Status>
+            |           <Tags>
+            |               <Tag>$tag</Tag>
+            |           </Tags>
+            |           <Author>$author</Author>
+            |       </Metadata>
+            |   </Post>
+            |</Posts>
+        """.trimMargin().reader()
+        val handlers = handlers<Post> {
+            "Posts" { use(Post.handlers) }
+        }
+        val posts = reader.parse(handlers).toList()
+        assertEquals(1, posts.size)
+        val post = posts[0]
+        assertEquals(title, post.title)
+        assertEquals(status, post.metadata?.status)
+        assertEquals(tag, post.metadata?.tags?.get(0))
+        assertEquals(author, post.metadata?.author)
     }
 
 }
