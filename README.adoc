@@ -1,5 +1,5 @@
 = XML Deserializer (XD)
-:libVersion: 1.0.2
+:libVersion: 1.0.3
 
 == Overview
 
@@ -16,9 +16,9 @@ The library is fast and memory efficient because it uses the https://en.wikipedi
 
 There are a number of different ways of processing XML documents in Java. This https://www.baeldung.com/java-xml-libraries[article] has a good overview of the options: SAX, DOM, StAX and JAXB.
 
-While each of them has their use, none of them provides a *high-level* API for processing an XML document. Instead, the user of the library must use and navigate various XML-specific data structures and configuration.
+While each of them has their use, none of them provides a *high-level* API for processing an XML document. Instead, the user of the library must use and navigate various XML-specific data structures and configurations.
 
-The goal of the XD library is to provide a high-level API that does not require knowledge of XML processing. The XML processing is hidden by the library and the use of the library is wholly programmatic, without any annotations or XML configuration. In addition, the processing does not require an XSD and can proceed piecemeal, only mapping the elements that are of interest, rather than mapping everything.
+The goal of the XD library is to provide a high-level API that does not require knowledge of XML processing. The XML processing is hidden by the library and the use of the library is wholly programmatic, without any annotations or XML configuration. In addition, the processing does not require an XSD and can proceed piecemeal, only mapping the elements that are of interest.
 
 == Usage
 
