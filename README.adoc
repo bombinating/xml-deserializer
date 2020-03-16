@@ -1,14 +1,14 @@
 = XML Deserializer (XD)
-:libVersion: 1.0.0
+:libVersion: 1.0.3
 
 == Overview
 
 image:https://github.com/bombinating/xml-deserializer/workflows/Build/badge.svg[link="https://github.com/bombinating/xml-deserializer/actions"]
 image:https://sonarcloud.io/api/project_badges/measure?project=bombinating_xml-deserializer&metric=alert_status["SonarCloud", link="https://sonarcloud.io/dashboard?id=bombinating_bombinating_xml-deserializer"]
 
-XML Deserializer (XD) is a Kotlin JVM library for quickly and efficiently converting an XML document into a sequence of objects.
+XML Deserializer (XD) is a *high-level*, https://kotlinlang.org/[Kotlin] JVM library for easily and efficiently converting an XML document into a sequence of objects.
 
-The library uses a simple DSL to map element names to handler lambdas, using a context object that the lambdas populate.
+The library uses a simple DSL to map element names to handler lambdas, using a context object that the lambdas populate, without exposing the low-level XML processing details.
 
 The library is fast and memory efficient because it uses the https://en.wikipedia.org/wiki/StAX[Streaming API for XML API] (StAX) for processing the XML.
 
@@ -16,9 +16,9 @@ The library is fast and memory efficient because it uses the https://en.wikipedi
 
 There are a number of different ways of processing XML documents in Java. This https://www.baeldung.com/java-xml-libraries[article] has a good overview of the options: SAX, DOM, StAX and JAXB.
 
-While each of them has their use, none of them provides a *high-level* API for processing an XML document. Instead, the user of the library must use and navigate various XML-specific data structures and configuration.
+While each of them has their use, none of them provides a *high-level* API for processing an XML document. Instead, the user of the library must use and navigate various XML-specific data structures and configurations.
 
-The goal of the XD library is to provide a high-level API that does not require knowledge of XML processing. The XML processing is hidden by the library and the use of the library is wholly programmatic, without any XML configuration. In addition, the processing does not require an XSD and can proceed piecemeal, only mapping the elements that are of interest, rather than mapping all of the elements.
+The goal of the XD library is to provide a high-level API that does not require knowledge of XML processing. The XML processing is hidden by the library and the use of the library is wholly programmatic, without any annotations or XML configuration. In addition, the processing does not require an XSD and can proceed piecemeal, only mapping the elements that are of interest.
 
 == Usage
 
@@ -71,7 +71,7 @@ The `XmlContextParser` interface specifies a `parse` method that returns a popul
 
 == Simple Example
 
-In this example, we want to parse an XML document of names for people.
+In this example, the XML document contains a list of names.
 
 [source,xml]
 ------
@@ -87,7 +87,7 @@ In this example, we want to parse an XML document of names for people.
 </People>
 ------
 
-We're going to store the data in a `Person` class. We want to populate the properties of the object as we encounter them in the XML document so it is convenient (though not required) if there is a no-arg constructor and the properties are mutable (`var`) and have default values. Note that on the JVM, if all of the constructor arguments have default values, the compiler will generate a no-arg constructor.
+The data is stored in a `Person` class. The properties of the object are populated as they are encountered in the XML document. Therefore, it is convenient (though not required) if there is a no-arg constructor, and the properties are mutable (`var`) and have default values. Note that on the JVM, if all of the constructor arguments have default values, the compiler will generate a no-arg constructor.
 
 [source,kotlin]
 ------
@@ -97,7 +97,7 @@ data class Person(
 )
 ------
 
-Next we define how to map the XML elements to object properties using the `handlers` method. The generic type (`<Person>`) indicates that the context object (`obj`) the handlers are populating is of type `Person`. For both handlers, the property is simply set to the text of the element.
+The next step is to define how to map the XML elements to object properties using the `handlers` method. The generic type (`<Person>`) indicates that the context object (`obj`) the handlers are populating is of type `Person`. For both handlers, the property is simply set to the text of the element.
 
 [source,kotlin]
 ------
@@ -121,7 +121,7 @@ data class Person(var firstName: String? = null, var lastName: Int? = null) {
 }
 ------
 
-For this example, we'll create the XML as a `String` and then convert the string to a `Reader`.
+For this example, the XML is stored in a `String` and then converted into a `Reader`.
 
 [source,kotlin]
 ------
@@ -139,7 +139,7 @@ val reader = """
 """.trimMargin().reader()
 ------
 
-The final piece is to invoke the `parse()` method on a reader with the XML data.
+The final piece is to invoke the `parse()` method on the reader.
 
 The `parse` method takes three parameters:
 
@@ -147,7 +147,7 @@ The `parse` method takes three parameters:
 * XML handler configuration
 * Lambda for creating objects of the type the parser emits and the handlers populate
 
-For defining the top-level handlers, we again use the `handlers` method. The parser emits `Person` objects so the generic type of the method is `Person`. The name of the XML element is `Person` and the `use` method tells the parser to use the handlers defined in `Person` `companion object`.
+For defining the top-level handlers, the `handlers` method is used. The parser emits `Person` objects so the generic type of the method is `Person`. The name of the XML element is `Person` and the `use` method tells the parser to use the handlers defined in the `Person` `companion object`.
 
 [source,kotlin]
 ------
@@ -546,3 +546,6 @@ val people = reader.parse(handlers<Person> {
 })
 
 ------
+
+== Change Log
+include::CHANGELOG.adoc[]

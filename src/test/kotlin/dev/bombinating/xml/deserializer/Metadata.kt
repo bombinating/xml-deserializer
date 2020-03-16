@@ -15,20 +15,17 @@
  */
 package dev.bombinating.xml.deserializer
 
-data class Phone(
-    var desc: String? = null,
-    var number: String? = null,
-    var ext: String? = null
-) {
+data class Metadata(
+    var author: String? = null,
+    var status: String? = null,
+    val tags: MutableList<String> = mutableListOf())
+{
     companion object {
         val handlers =
-            handlers<Phone> {
-                "PhoneNumber" { obj.number = text }
-                "PhoneExtension" { obj.ext = text }
+            handlers<Metadata> {
+                "Author" { obj.author = text }
+                "Tag" { obj.tags.add(text) }
+                "Status" { obj.status = text }
             }
     }
-
-    val empty: Boolean
-        get() = (desc == null) && (number == null) && (ext == null)
-
 }

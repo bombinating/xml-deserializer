@@ -15,8 +15,11 @@
  */
 package dev.bombinating.xml.deserializer
 
+import mu.KotlinLogging
 import javax.xml.stream.XMLEventReader
 import javax.xml.stream.events.XMLEvent
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Implementation of [DepthAwareXmIterator] using [XMLEventReader].
@@ -31,6 +34,7 @@ class DepthAwareXMLEventReader(private val reader: XMLEventReader) : DepthAwareX
 
     override val text: String
         get() {
+            logger.debug { "Text element: decreasing depth to ${depth - 1}" }
             _depth--
             return reader.elementText
         }
@@ -41,9 +45,11 @@ class DepthAwareXMLEventReader(private val reader: XMLEventReader) : DepthAwareX
         val event = reader.nextEvent()
         when {
             event.isStartElement -> {
+                logger.debug { "Start element: ${event.asStartElement().name} -- increasing depth to ${depth + 1}" }
                 _depth++
             }
             event.isEndElement -> {
+                logger.debug { "End element: ${event.asEndElement().name} -- decreasing depth to ${depth - 1}" }
                 _depth--
             }
         }
