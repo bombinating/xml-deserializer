@@ -24,7 +24,7 @@ import javax.xml.namespace.QName
  */
 internal class QNameXmlName(private val qname: QName) : XmlElementName {
 
-    override val prefix: String?
+    val prefix: String?
         get() = qname.prefix
 
     override val namespace: String?

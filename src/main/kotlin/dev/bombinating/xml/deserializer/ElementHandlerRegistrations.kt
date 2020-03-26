@@ -23,9 +23,10 @@ private val logger = KotlinLogging.logger {}
  * Implementation of [HandlerRegistrations].
  *
  * @param T type of the object the handlers are populating
+ * @param namespaceAware whether namespaces should be taken into account when finding handlers
  */
-class ElementNameHandlerRegistrations<T> : HandlerRegistrations<T> {
-    private val handlers: MutableMap<String, HandlerContext<T>.() -> Unit> = mutableMapOf()
+class ElementHandlerRegistrations<T>(private val namespaceAware: Boolean) : HandlerRegistrations<T> {
+    private val handlers: MutableMap<XmlElementRegistration, HandlerContext<T>.() -> Unit> = mutableMapOf()
 
     /**
      * Maps the XML element name to the handler
@@ -34,19 +35,24 @@ class ElementNameHandlerRegistrations<T> : HandlerRegistrations<T> {
      * @param handler handler for processing the XML element
      */
     operator fun String.invoke(handler: HandlerContext<T>.() -> Unit) {
-        logger.debug { "Adding a handler for element name '$this'" }
-        handlers[this] = handler
+        logger.debug { "Adding a handler for element name '$this' with no namespace" }
+        handlers[XmlElementRegistration(name = this)] = handler
+    }
+
+    operator fun XmlElementName.invoke(handler: HandlerContext<T>.() -> Unit) {
+        logger.debug { "Adding a handler for element name '$name' with namespace '$namespace'" }
+        handlers[XmlElementRegistration(namespace = namespace, name = name)] = handler
     }
 
     override operator fun invoke(context: HandlerContext<T>): Boolean {
-        val elementName = context.element.name.name
-        val registeredHandler = handlers[elementName]
+        val key = XmlElementRegistration(context.element.name, namespaceAware)
+        val registeredHandler = handlers[key]
         return registeredHandler?.let { handler ->
             try {
-                logger.debug { "Handler found for element name '$elementName'" }
+                logger.debug { "Handler found for element '$key'" }
                 handler(context)
             } catch (@Suppress("TooGenericExceptionCaught") e: Throwable) {
-                logger.warn { "Exception invoking handler for element name '$elementName': $e" }
+                logger.warn { "Exception invoking handler for element name '$key': $e" }
                 val ex = ProcessingException(type = ProcessingType.Handler, element = context.element, cause = e)
                 context.config.processingExceptionHandler?.let {
                     logger.debug { "Invoking processing exception handler" }
@@ -56,7 +62,7 @@ class ElementNameHandlerRegistrations<T> : HandlerRegistrations<T> {
                 }
             }
             true
-        } ?: false.also { logger.debug { "No handler registered for element name '$elementName'" } }
+        } ?: false.also { logger.debug { "No handler registered for element name '$key'" } }
     }
 
 }
@@ -65,12 +71,17 @@ class ElementNameHandlerRegistrations<T> : HandlerRegistrations<T> {
  * Creates [HandlerRegistrations] for type [T]
  *
  * @param T type of object the handlers are populating
+ * @param namespaceAware whether namespaces should be taken into account when finding handlers
  * @param initializer lambda for defining handlers
  * @return [HandlerRegistrations] created by the [initializer]
  */
-fun <T> handlers(initializer: ElementNameHandlerRegistrations<T>.() -> Unit): HandlerRegistrations<T> =
-    ElementNameHandlerRegistrations<T>().apply {
+fun <T> handlers(
+    namespaceAware: Boolean = false,
+    initializer: ElementHandlerRegistrations<T>.() -> Unit
+): HandlerRegistrations<T> =
+    ElementHandlerRegistrations<T>(namespaceAware).apply {
         logger.debug { "Starting to register handlers" }
         initializer(this)
         logger.debug { "Finished registering handlers" }
     }
+
