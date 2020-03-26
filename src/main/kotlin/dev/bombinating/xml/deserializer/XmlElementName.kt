@@ -20,11 +20,6 @@ package dev.bombinating.xml.deserializer
  */
 interface XmlElementName {
     /**
-     * Optional element name prefix (e.g., ns1)
-     */
-    val prefix: String?
-
-    /**
      * Optional namespace URL (e.g., http://example.com)
      */
     val namespace: String?

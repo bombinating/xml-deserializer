@@ -24,6 +24,9 @@ import kotlin.test.assertNull
 
 private val logger = KotlinLogging.logger {}
 
+private const val ns1: String = "http://example1.com"
+private const val ns2: String = "http://example2.com"
+
 class XmlIteratorTest {
 
     @Test
@@ -417,6 +420,133 @@ class XmlIteratorTest {
         assertEquals(status, post.metadata?.status)
         assertEquals(tag, post.metadata?.tags?.get(0))
         assertEquals(author, post.metadata?.author)
+    }
+
+    @Test
+    fun `namespace aware with namespace handlers test`() {
+        val person1Name = "Test1"
+        val reader = """
+            |<ns1:People xmlns:ns1="$ns1">
+            |   <ns1:Person>
+            |       <ns1:FirstName>$person1Name</ns1:FirstName>
+            |   </ns1:Person>
+            |</ns1:People>
+        """.trimMargin().reader()
+        val personHandlers = handlers<Person>(namespaceAware = true) {
+            ns1["FirstName"] { obj.firstName = text }
+        }
+        val handlers = handlers<Person> {
+            "Person" { use(personHandlers) }
+        }
+        val people = reader.parse(handlers).toList()
+        assertEquals(1, people.size)
+        assertEquals(person1Name, people[0].firstName)
+    }
+
+    @Test
+    fun `namespace aware with top level namespace handlers test`() {
+        val person1Name = "Test1"
+        val reader = """
+            |<ns1:People xmlns:ns1="$ns1">
+            |   <ns1:Person>
+            |       <ns1:FirstName>$person1Name</ns1:FirstName>
+            |   </ns1:Person>
+            |</ns1:People>
+        """.trimMargin().reader()
+        val personHandlers = handlers<Person>(namespaceAware = true) {
+            ns1["FirstName"] { obj.firstName = text }
+        }
+        val handlers = handlers<Person>(namespaceAware = true) {
+            ns1["Person"] { use(personHandlers) }
+        }
+        val people = reader.parse(handlers).toList()
+        assertEquals(1, people.size)
+        assertEquals(person1Name, people[0].firstName)
+    }
+
+    @Test
+    fun `namespace aware without namespace handlers test`() {
+        val person1Name = "Test1"
+        val reader = """
+            |<ns1:People xmlns:ns1="$ns1">
+            |   <ns1:Person>
+            |       <ns1:FirstName>$person1Name</ns1:FirstName>
+            |   </ns1:Person>
+            |</ns1:People>
+        """.trimMargin().reader()
+        val handlers = handlers<Person>(namespaceAware = true) {
+            "FirstName" { obj.firstName = text }
+        }
+        val people = reader.parse(handlers).toList()
+        assertEquals(0, people.size)
+    }
+
+    @Test
+    fun `namespaces without namespace aware parsing test`() {
+        val person1Name = "Test1"
+        val reader = """
+            |<ns1:People xmlns:ns1="$ns1">
+            |   <ns1:Person>
+            |       <ns1:FirstName>$person1Name</ns1:FirstName>
+            |   </ns1:Person>
+            |</ns1:People>
+        """.trimMargin().reader()
+        val handlers = handlers<Person> {
+            "FirstName" { obj.firstName = text }
+        }
+        val people = reader.parse(handlers).toList()
+        assertEquals(1, people.size)
+        assertEquals(person1Name, people[0].firstName)
+    }
+
+    @Test
+    fun `multiple namespaces aware parsing test`() {
+        val person1FirstName = "First"
+        val person1LastName = "Last"
+        val reader = """
+            |<ns1:People xmlns:ns1="$ns1" xmlns:ns2="$ns2">
+            |   <ns1:Person>
+            |       <ns1:FirstName>$person1FirstName</ns1:FirstName>
+            |       <ns2:LastName>$person1LastName</ns2:LastName>
+            |   </ns1:Person>
+            |</ns1:People>
+        """.trimMargin().reader()
+        val personHandlers = handlers<Person>(namespaceAware = true) {
+            ns1["FirstName"] { obj.firstName = text }
+            ns2["LastName"] { obj.lastName = text }
+        }
+        val handlers = handlers<Person> {
+            "Person" { use(personHandlers) }
+        }
+        val people = reader.parse(handlers).toList()
+        assertEquals(1, people.size)
+        assertEquals(person1FirstName, people[0].firstName)
+        assertEquals(person1LastName, people[0].lastName)
+    }
+
+    @Test
+    fun `namespaces aware without namespace element parsing test`() {
+        val person1FirstName = "First"
+        val person1LastName = "Last"
+        val reader = """
+            |<ns1:People xmlns:ns1="$ns1" xmlns:ns2="$ns2">
+            |   <ns1:Person>
+            |       <ns1:FirstName>$person1FirstName</ns1:FirstName>
+            |       <LastName>$person1LastName</LastName>
+            |   </ns1:Person>
+            |</ns1:People>
+        """.trimMargin().reader()
+        val personHandlers = handlers<Person>(namespaceAware = true) {
+            ns1["FirstName"] { obj.firstName = text }
+            ns1["LastName"] { obj.lastName = text }
+        }
+        val handlers = handlers<Person> {
+            "Person" { use(personHandlers) }
+        }
+        val people = reader.parse(handlers).toList()
+        assertEquals(1, people.size)
+        assertEquals(person1FirstName, people[0].firstName)
+        assertNull(people[0].lastName)
     }
 
 }
