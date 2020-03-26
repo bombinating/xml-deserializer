@@ -36,7 +36,7 @@ data class Person(
                             startMonth = element["start"]?.toInt(),
                             endMonth = element["end"]?.toInt()
                         )
-                    }.nullIf(Address::empty)
+                    }
                 }
                 "Phone" {
                     obj.phones.add(parse(Phone.handlers) {
